@@ -133,9 +133,28 @@ def sentinel_from_url(url, sentinel_class=redis.sentinel.Sentinel):
 
 
 class _ExtensionData(object):
-    def __init__(self, sentinel=None, default_connection=None):
+    def __init__(self, client_class, sentinel=None, default_connection=None):
+        self.client_class = client_class
         self.sentinel = sentinel
         self.default_connection = default_connection
+        self.master_connections = {}
+        self.slave_connections = {}
+
+    def master_for(self, service_name, **kwargs):
+        if self.sentinel is None:
+            raise ValueError('Cannot get master {} using non-sentinel configuration'.format(service_name))
+        if service_name not in self.master_connections:
+            self.master_connections[service_name] = self.sentinel.master_for(service_name, redis_class=self.client_class,
+                                                                             **kwargs)
+        return self.master_connections[service_name]
+
+    def slave_for(self, service_name, **kwargs):
+        if self.sentinel is None:
+            raise ValueError('Cannot get slave {} using non-sentinel configuration'.format(service_name))
+        if service_name not in self.slave_connections:
+            self.slave_connections[service_name] = self.sentinel.slave_for(service_name, redis_class=self.client_class,
+                                                                           **kwargs)
+        return self.slave_connections[service_name]
 
 
 class _ExtensionProxy(LocalProxy):
@@ -180,7 +199,6 @@ class SentinelExtension(object):
             app.extensions[_EXTENSION_KEY] = {}
 
         extensions = app.extensions[_EXTENSION_KEY]
-        data = _ExtensionData()
 
         if config_prefix is None:
             config_prefix = 'REDIS'
@@ -213,6 +231,8 @@ class SentinelExtension(object):
             if isinstance(sentinel_class, _string_types):
                 sentinel_class = import_string(sentinel_class)
 
+        data = _ExtensionData(client_class)
+
         if url:
             parsed_url = urlparse.urlparse(url)
             if parsed_url.scheme not in ['redis', 'rediss', 'unix', 'redis+sentinel']:
@@ -220,6 +240,7 @@ class SentinelExtension(object):
 
             if parsed_url.scheme == 'redis+sentinel':
                 sentinel, default_connnection = sentinel_from_url(parsed_url, sentinel_class=sentinel_class)
+                data.sentinel = sentinel
                 if default_connnection:
                     if default_connnection['slave']:
                         data.default_connection = sentinel.slave_for(default_connnection['service'], redis_class=client_class)
@@ -258,3 +279,8 @@ class SentinelExtension(object):
 
         return {arg: get_config(arg.upper()) for arg in args if key(arg.upper()) in config}
 
+    def master_for(self, service_name, **kwargs):
+        return _ExtensionProxy(self, lambda ext_data: ext_data.master_for(service_name, **kwargs))
+
+    def slave_for(self, service_name, **kwargs):
+        return _ExtensionProxy(self, lambda ext_data: ext_data.slave_for(service_name, **kwargs))

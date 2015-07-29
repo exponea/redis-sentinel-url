@@ -261,6 +261,7 @@ class TestWithApp(TestCase):
         sentinel.init_app(self.app)
         conn = sentinel.default_connection
         with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['is_master'], True)
             self.assertEqual(inst.kwargs['service_name'], 'mymaster')
@@ -272,6 +273,7 @@ class TestWithApp(TestCase):
         sentinel.init_app(self.app)
         conn = sentinel.default_connection
         with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['is_master'], False)
             self.assertEqual(inst.kwargs['service_name'], 'myslave')
@@ -289,6 +291,7 @@ class TestWithApp(TestCase):
         sentinel.init_app(self.app, sentinel_class=FakeSentinel)
         conn = sentinel.default_connection
         with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['is_master'], True)
 
@@ -299,6 +302,7 @@ class TestWithApp(TestCase):
         sentinel.init_app(self.app)
         conn = sentinel.default_connection
         with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['is_master'], True)
 
@@ -309,6 +313,7 @@ class TestWithApp(TestCase):
         sentinel.init_app(self.app)
         conn = sentinel.default_connection
         with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['is_master'], True)
 
@@ -361,3 +366,47 @@ class TestWithApp(TestCase):
         with self.app3.app_context():
             with self.assertRaisesRegexp(ValueError, 'RedisSentinel extension with config prefix REDIS was not initialized for application test3'):
                 conn1._get_current_object()
+
+    def test_named_master(self):
+        sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
+        self.app.config['REDIS_URL'] = 'redis+sentinel://hostname:7001/mymaster/3'
+        sentinel.init_app(self.app)
+        conn = sentinel.master_for('othermaster', db=6)
+        with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
+            inst = conn._get_current_object()
+            self.assertEqual(inst.kwargs['is_master'], True)
+            self.assertEqual(inst.kwargs['service_name'], 'othermaster')
+            self.assertEqual(inst.kwargs['connection_kwargs']['db'], 6)
+
+    def test_named_master_no_sentinel(self):
+        sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
+        self.app.config['REDIS_URL'] = 'redis://hostname:7001/3'
+        sentinel.init_app(self.app)
+        conn = sentinel.master_for('othermaster', db=6)
+        with self.app.app_context():
+            self.assertIsNone(sentinel.sentinel._get_current_object())
+            with self.assertRaisesRegexp(ValueError, 'Cannot get master othermaster using non-sentinel configuration'):
+                inst = conn._get_current_object()
+
+    def test_named_slave(self):
+        sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
+        self.app.config['REDIS_URL'] = 'redis+sentinel://hostname:7001/mymaster/3'
+        sentinel.init_app(self.app)
+        conn = sentinel.slave_for('otherslave', db=6)
+        with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
+            inst = conn._get_current_object()
+            self.assertEqual(inst.kwargs['is_master'], False)
+            self.assertEqual(inst.kwargs['service_name'], 'otherslave')
+            self.assertEqual(inst.kwargs['connection_kwargs']['db'], 6)
+
+    def test_named_slave_no_sentinel(self):
+        sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
+        self.app.config['REDIS_URL'] = 'redis://hostname:7001/3'
+        sentinel.init_app(self.app)
+        conn = sentinel.slave_for('otherslave', db=6)
+        with self.app.app_context():
+            self.assertIsNone(sentinel.sentinel._get_current_object())
+            with self.assertRaisesRegexp(ValueError, 'Cannot get slave otherslave using non-sentinel configuration'):
+                inst = conn._get_current_object()

@@ -3,3 +3,4 @@
 *.bak
 *~
 .idea
+Flask_Redis_Sentinel.egg-info

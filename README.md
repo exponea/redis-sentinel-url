@@ -5,7 +5,8 @@
 Flask-Redis-Sentinel provides support for connecting to Redis using Sentinel and also supports connecting to Redis
 without it.
 
-* Apache License 2.0
+* Supports Python 2.7 and 3.3+
+* Licensed using Apache License 2.0
 
 ## Basic usage
 

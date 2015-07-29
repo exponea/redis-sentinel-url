@@ -1,5 +1,7 @@
 # Flask-Redis-Sentinel
 
+![](https://travis-ci.org/Infinario/flask-redis-sentinel.svg)
+
 Flask-Redis-Sentinel provides support for connecting to Redis using Sentinel and also supports connecting to Redis
 without it.
 

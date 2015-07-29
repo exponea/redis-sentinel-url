@@ -92,6 +92,10 @@ class TestUrl(TestCase):
         with self.assertRaisesRegexp(ValueError, 'Unsupported scheme: redis'):
             parse_sentinel_url('redis://hostname:7000/')
 
+    def test_with_password(self):
+        parsed = parse_sentinel_url('redis+sentinel://:thesecret@hostname:7000')
+        self.assertEquals(parsed.sentinel_options, {'password': 'thesecret'})
+
 
 class TestCompatibilityWithFlaskAndRedis(TestCase):
     def test_empty_settings(self):

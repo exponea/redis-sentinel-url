@@ -25,6 +25,7 @@ URL scheme:
 redis+sentinel://localhost:26379[,otherhost:26379,...]/mymaster/0
 redis+sentinel://localhost:26379[,otherhost:26379,...]/mymaster/0?socket_timeout=0.1
 redis+sentinel://localhost:26379[,otherhost:26379,...]/mymaster/0?sentinel_socket_timeout=0.1
+redis+sentinel://:sentinel-secret-password@localhost:26379[,otherhost:26379,...]/mymaster/0?sentinel_socket_timeout=0.1
 ```
 
 The extension also supports URL schemes as supported by redis-py for connecting to an instance directly without Sentinel:

@@ -67,7 +67,18 @@ def parse_sentinel_url(url):
 
         return host, port
 
-    hosts = [parse_host(s) for s in url.netloc.split(',')]
+    if '@' in url.netloc:
+        auth, hostspec = url.netloc.split('@', 1)
+    else:
+        auth = None
+        hostspec = url.netloc
+
+    if auth and ':' in auth:
+        _, password = auth.split(':', 1)
+    else:
+        password = None
+
+    hosts = [parse_host(s) for s in hostspec.split(',')]
 
     global_option_types = {
         'min_other_sentinels': int,
@@ -83,6 +94,10 @@ def parse_sentinel_url(url):
 
     sentinel_url_options = {}
     url_options = {}
+
+    if password is not None:
+        sentinel_url_options['password'] = password
+
     for name, value in iteritems(urlparse.parse_qs(url.query)):
         if name in global_option_types:
             option_name = name

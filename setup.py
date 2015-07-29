@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='Flask-Redis-Sentinel',
@@ -22,3 +22,4 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules'
     ]
 )
+

@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from distutils.core import setup
+
+setup(
+    name='Flask-Redis-Sentinel',
+    py_modules=['flask_redis_sentinel'],
+    version='0.1.0',
+    install_requires=['Flask>=0.10.1', 'redis>=2.10.3'],
+    description='Redis-Sentinel integration for Flask',
+    url='https://github.com/infinario/flask-redis-sentinel',
+    author='Martin Sucha',
+    author_email='martin.sucha@infinario.com',
+    license='Apache 2.0',
+    classifiers=[
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Operating System :: OS Independent',
+        'License :: OSI Approved :: Apache Software License',
+        'Development Status :: 2 - Pre-Alpha',
+        'Intended Audience :: Developers',
+        'Topic :: Software Development :: Libraries :: Python Modules'
+    ]
+)

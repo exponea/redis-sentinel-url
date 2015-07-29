@@ -14,7 +14,10 @@
 
 from collections import namedtuple
 import inspect
-import urlparse
+try:
+    import urllib.parse as urlparse
+except ImportError:
+    import urlparse
 from flask import current_app
 import warnings
 import redis

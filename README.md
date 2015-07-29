@@ -8,6 +8,14 @@ without it.
 * Supports Python 2.7 and 3.3+
 * Licensed using Apache License 2.0
 
+## Installation
+
+Install with pip
+
+```
+pip install Flask-Redis-Sentinel
+```
+
 ## Basic usage
 
 ```python

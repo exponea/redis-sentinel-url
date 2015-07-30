@@ -208,6 +208,30 @@ class _ExtensionProxy(LocalProxy):
         return local(ext_data)
 
 
+class _PrefixedDict(object):
+    def __init__(self, config, prefix):
+        self.config = config
+        self.prefix = prefix
+
+    def _key(self, key):
+        return '{}_{}'.format(self.prefix, key)
+
+    def __getitem__(self, item):
+        return self.config[self._key(item)]
+
+    def __setitem__(self, item, value):
+        self.config[self._key(item)] = value
+
+    def __delitem__(self, item):
+        del self.config[self._key(item)]
+
+    def __contains__(self, item):
+        return self._key(item) in self.config
+
+    def get(self, item, default=None):
+        return self.config.get(self._key(item), default)
+
+
 class SentinelExtension(object):
     """Flask extension that supports connections to master using Redis Sentinel.
 
@@ -240,17 +264,16 @@ class SentinelExtension(object):
 
         self.config_prefix = config_prefix
 
-        def key(suffix):
-            return '{}_{}'.format(config_prefix, suffix)
+        config = _PrefixedDict(app.config, config_prefix)
+        url = config.get('URL')
 
-        url = app.config.get(key('URL'))
 
         if client_class is not None:
             pass
         elif self.client_class is not None:
             client_class = self.client_class
         else:
-            client_class = app.config.get(key('CLASS'), redis.StrictRedis)
+            client_class = config.get('CLASS', redis.StrictRedis)
             if isinstance(client_class, _string_types):
                 client_class = import_string(client_class)
 
@@ -259,7 +282,7 @@ class SentinelExtension(object):
         elif self.sentinel_class is not None:
             sentinel_class = self.sentinel_class
         else:
-            sentinel_class = app.config.get(key('SENTINEL_CLASS'), redis.sentinel.Sentinel)
+            sentinel_class = config.get('SENTINEL_CLASS', redis.sentinel.Sentinel)
             if isinstance(sentinel_class, _string_types):
                 sentinel_class = import_string(sentinel_class)
 
@@ -284,31 +307,28 @@ class SentinelExtension(object):
             # Stay compatible with Flask-And-Redis for a while
             warnings.warn('Setting redis connection via separate variables is deprecated. Please use REDIS_URL.',
                           DeprecationWarning)
-            kwargs = self._config_from_variables(app.config, client_class)
+            kwargs = self._config_from_variables(config, client_class)
             data.default_connection = client_class(**kwargs)
 
         extensions[config_prefix] = data
 
     @staticmethod
-    def _config_from_variables(config, client_class, config_prefix='REDIS'):
-        def key(suffix):
-            return '{}_{}'.format(config_prefix, suffix)
-
-        host = config.get(key('HOST'))
+    def _config_from_variables(config, client_class):
+        host = config.get('HOST')
         if host and (host.startswith('file://') or host.startswith('/')):
-            config.pop(key('HOST'))
-            config[key('UNIX_SOCKET_PATH')] = host
+            del config['HOST']
+            config['UNIX_SOCKET_PATH'] = host
 
         args = inspect.getargspec(client_class.__init__).args
         args.remove('self')
 
         def get_config(suffix):
-            value = config[key(suffix)]
+            value = config[suffix]
             if suffix == 'PORT':
                 return int(value)
             return value
 
-        return {arg: get_config(arg.upper()) for arg in args if key(arg.upper()) in config}
+        return {arg: get_config(arg.upper()) for arg in args if arg.upper() in config}
 
     def master_for(self, service_name, **kwargs):
         return _ExtensionProxy(self, lambda ext_data: ext_data.master_for(service_name, **kwargs))

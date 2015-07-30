@@ -16,7 +16,7 @@ from unittest import TestCase
 from flask import Flask
 from mock import MagicMock
 import redis
-from flask_redis_sentinel import parse_sentinel_url, SentinelExtension
+from flask_redis_sentinel import parse_sentinel_url, SentinelExtension, _PrefixedDict
 
 
 class TestUrl(TestCase):
@@ -102,23 +102,62 @@ class TestCompatibilityWithFlaskAndRedis(TestCase):
         self.assertEqual(SentinelExtension._config_from_variables({}, redis.StrictRedis), {})
 
     def test_port(self):
-        self.assertEqual(SentinelExtension._config_from_variables({'REDIS_PORT': 7379}, redis.StrictRedis)['port'], 7379)
+        self.assertEqual(SentinelExtension._config_from_variables({'PORT': 7379}, redis.StrictRedis)['port'], 7379)
 
     def test_host(self):
-        self.assertEqual(SentinelExtension._config_from_variables({'REDIS_HOST': 'otherhost'}, redis.StrictRedis),
+        self.assertEqual(SentinelExtension._config_from_variables({'HOST': 'otherhost'}, redis.StrictRedis),
                          {'host': 'otherhost'})
 
     def test_host_path(self):
-        self.assertEqual(SentinelExtension._config_from_variables({'REDIS_HOST': '/path/to/socket'}, redis.StrictRedis),
+        self.assertEqual(SentinelExtension._config_from_variables({'HOST': '/path/to/socket'}, redis.StrictRedis),
                          {'unix_socket_path': '/path/to/socket'})
 
     def test_host_file_url(self):
-        self.assertEqual(SentinelExtension._config_from_variables({'REDIS_HOST': 'file:///path/to/socket'}, redis.StrictRedis),
+        self.assertEqual(SentinelExtension._config_from_variables({'HOST': 'file:///path/to/socket'}, redis.StrictRedis),
                          {'unix_socket_path': 'file:///path/to/socket'})
 
     def test_db(self):
-        self.assertEqual(SentinelExtension._config_from_variables({'REDIS_DB': 2}, redis.StrictRedis),
+        self.assertEqual(SentinelExtension._config_from_variables({'DB': 2}, redis.StrictRedis),
                          {'db': 2})
+
+
+class TestPrefixedDict(TestCase):
+    def setUp(self):
+        self.config = {
+            'REDIS_HOST': 'localhost',
+            'REDIS_PORT': 6379,
+            'OTHER_KEY': 'aA',
+            'ALTERNATE_HOST': 'alternate.local',
+            'ALTERNATE_PORT': 6380,
+        }
+        self.prefixed = _PrefixedDict(self.config, 'REDIS')
+
+    def test_get(self):
+        self.assertEqual(self.prefixed.get('HOST'), 'localhost')
+        self.assertEqual(self.prefixed.get('PORT'), 6379)
+        self.assertEqual(self.prefixed.get('DB'), None)
+
+    def test_getitem(self):
+        self.assertEqual(self.prefixed['HOST'], 'localhost')
+        self.assertEqual(self.prefixed['PORT'], 6379)
+        with self.assertRaises(KeyError):
+            self.prefixed['DB']
+
+    def test_set(self):
+        self.prefixed['DB'] = 2
+        self.prefixed['PORT'] = 7000
+        self.assertEquals(self.config['REDIS_DB'], 2)
+        self.assertEquals(self.config['REDIS_PORT'], 7000)
+
+    def test_del(self):
+        del self.prefixed['PORT']
+        with self.assertRaises(KeyError):
+            del self.prefixed['DB']
+
+    def test_contains(self):
+        self.assertTrue('PORT' in self.prefixed)
+        self.assertFalse('DB' in self.prefixed)
+
 
 
 class FakeRedis(MagicMock):

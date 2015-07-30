@@ -267,24 +267,10 @@ class SentinelExtension(object):
         config = _PrefixedDict(app.config, config_prefix)
         url = config.get('URL')
 
-
-        if client_class is not None:
-            pass
-        elif self.client_class is not None:
-            client_class = self.client_class
-        else:
-            client_class = config.get('CLASS', redis.StrictRedis)
-            if isinstance(client_class, _string_types):
-                client_class = import_string(client_class)
-
-        if sentinel_class is not None:
-            pass
-        elif self.sentinel_class is not None:
-            sentinel_class = self.sentinel_class
-        else:
-            sentinel_class = config.get('SENTINEL_CLASS', redis.sentinel.Sentinel)
-            if isinstance(sentinel_class, _string_types):
-                sentinel_class = import_string(sentinel_class)
+        client_class = self._resolve_class(config, 'CLASS', client_class, 'client_class',
+                                           default=redis.StrictRedis)
+        sentinel_class = self._resolve_class(config, 'SENTINEL_CLASS', sentinel_class, 'sentinel_class',
+                                             default=redis.sentinel.Sentinel)
 
         data = _ExtensionData(client_class)
 
@@ -311,6 +297,17 @@ class SentinelExtension(object):
             data.default_connection = client_class(**kwargs)
 
         extensions[config_prefix] = data
+
+    def _resolve_class(self, config, config_key, the_class, attr, default):
+        if the_class is not None:
+            pass
+        elif getattr(self, attr) is not None:
+            the_class = getattr(self, attr)
+        else:
+            the_class = config.get(config_key, default)
+            if isinstance(the_class, _string_types):
+                the_class = import_string(the_class)
+        return the_class
 
     @staticmethod
     def _config_from_variables(config, client_class):

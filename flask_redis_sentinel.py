@@ -47,11 +47,13 @@ SentinelUrlParseResult = namedtuple('SentinelUrlParseResult', ['hosts', 'sentine
                                                                'default_connection'])
 
 
-def parse_sentinel_url(url):
+def parse_sentinel_url(url, sentinel_options=None, connection_options=None):
     """Parse a URL listing sentinel options.
 
     :param url: redis+sentinel://host:port[,host2:port2,...]/service_name/db[?socket_timeout=0.1]
-    :return: (redis.sentinel.Sentinel, service_name)
+    :param sentinel_options: default sentinel options as dict, the ones in url always win
+    :param connection_options: default client options as dict, the ones in url always win
+    :return: SentinelUrlParseResult
     """
 
     if isinstance(url, _string_types):
@@ -96,7 +98,11 @@ def parse_sentinel_url(url):
     }
 
     sentinel_url_options = {}
+    if sentinel_options:
+        sentinel_url_options.update(sentinel_options)
     url_options = {}
+    if connection_options:
+        url_options.update(connection_options)
 
     if password is not None:
         sentinel_url_options['password'] = password
@@ -158,8 +164,8 @@ def parse_sentinel_url(url):
     return SentinelUrlParseResult(hosts, sentinel_url_options, url_options, default_connection)
 
 
-def sentinel_from_url(url, sentinel_class=redis.sentinel.Sentinel):
-    parsed = parse_sentinel_url(url)
+def sentinel_from_url(url, sentinel_class=redis.sentinel.Sentinel, sentinel_options=None, connection_options=None):
+    parsed = parse_sentinel_url(url, sentinel_options=sentinel_options, connection_options=connection_options)
     return (sentinel_class(parsed.hosts, sentinel_kwargs=parsed.sentinel_options, **parsed.connection_options),
             parsed.default_connection)
 
@@ -231,6 +237,9 @@ class _PrefixedDict(object):
     def get(self, item, default=None):
         return self.config.get(self._key(item), default)
 
+    def pop(self, item, *args, **kwargs):
+        return self.config.pop(self._key(item), *args, **kwargs)
+
 
 class SentinelExtension(object):
     """Flask extension that supports connections to master using Redis Sentinel.
@@ -279,8 +288,18 @@ class SentinelExtension(object):
             if parsed_url.scheme not in ['redis', 'rediss', 'unix', 'redis+sentinel']:
                 raise ValueError('Unsupported redis URL scheme: {}'.format(parsed_url.scheme))
 
+            connection_options = self._config_from_variables(config, client_class)
+
+            connection_options.pop('host', None)
+            connection_options.pop('port', None)
+            connection_options.pop('db', None)
+
             if parsed_url.scheme == 'redis+sentinel':
-                sentinel, default_connnection = sentinel_from_url(parsed_url, sentinel_class=sentinel_class)
+                sentinel_options = self._config_from_variables(_PrefixedDict(config, 'SENTINEL'), client_class)
+
+                sentinel, default_connnection = sentinel_from_url(parsed_url, sentinel_class=sentinel_class,
+                                                                  sentinel_options=sentinel_options,
+                                                                  connection_options=connection_options)
                 data.sentinel = sentinel
                 if default_connnection:
                     if default_connnection['slave']:
@@ -288,7 +307,7 @@ class SentinelExtension(object):
                     else:
                         data.default_connection = sentinel.master_for(default_connnection['service'], redis_class=client_class)
             else:
-                data.default_connection = client_class.from_url(url)
+                data.default_connection = client_class.from_url(url, **connection_options)
         else:
             # Stay compatible with Flask-And-Redis for a while
             warnings.warn('Setting redis connection via separate variables is deprecated. Please use REDIS_URL.',

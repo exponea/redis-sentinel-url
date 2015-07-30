@@ -158,6 +158,17 @@ class TestPrefixedDict(TestCase):
         self.assertTrue('PORT' in self.prefixed)
         self.assertFalse('DB' in self.prefixed)
 
+    def test_pop(self):
+        self.assertEquals(self.prefixed.pop('PORT'), 6379)
+        self.assertNotIn('REDIS_PORT', self.config)
+        with self.assertRaises(KeyError):
+            self.prefixed.pop('DB')
+
+    def test_pop_default(self):
+        self.assertEquals(self.prefixed.pop('PORT', None), 6379)
+        self.assertNotIn('REDIS_PORT', self.config)
+        self.assertIsNone(self.prefixed.pop('DB', None))
+        self.assertNotIn('REDIS_DB', self.config)
 
 
 class FakeRedis(MagicMock):
@@ -209,7 +220,7 @@ class FakeSentinel(object):
                  **connection_kwargs):
         self._sentinels = sentinels
         self.min_other_sentinels = min_other_sentinels
-        self.sentinels_kwargs = sentinel_kwargs
+        self.sentinel_kwargs = sentinel_kwargs
         self.connection_kwargs = connection_kwargs
 
     def _update_kwargs(self, kwargs, connection_kwargs):
@@ -291,11 +302,17 @@ class TestWithApp(TestCase):
     def test_default_connection_redis_url(self):
         sentinel = SentinelExtension(client_class=FakeRedis)
         self.app.config['REDIS_URL'] = 'redis://hostname:7001/3'
+        self.app.config['REDIS_HOST'] = 'ignored'  # should be ignored
+        self.app.config['REDIS_PORT'] = 5000  # should be ignored
+        self.app.config['REDIS_DB'] = 7  # should be ignored
         sentinel.init_app(self.app)
         conn = sentinel.default_connection
         with self.app.app_context():
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['url'], 'redis://hostname:7001/3')
+            self.assertNotIn('host', inst.kwargs)
+            self.assertNotIn('port', inst.kwargs)
+            self.assertNotIn('db', inst.kwargs)
 
     def test_default_connection_redis_vars(self):
         sentinel = SentinelExtension(client_class=FakeRedis)
@@ -312,29 +329,47 @@ class TestWithApp(TestCase):
             self.assertEqual(inst.kwargs['db'], 3)
             self.assertEqual(inst.kwargs['decode_responses'], True)
 
+    def test_sentinel_kwargs_from_config(self):
+        sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
+        self.app.config['REDIS_URL'] = 'redis+sentinel://hostname:7001/mymaster/3'
+        self.app.config['REDIS_SENTINEL_SOCKET_CONNECT_TIMEOUT'] = 0.3
+        sentinel.init_app(self.app)
+        with self.app.app_context():
+            self.assertIsNotNone(sentinel.sentinel)
+            self.assertEquals(sentinel.sentinel.sentinel_kwargs, {'socket_connect_timeout': 0.3})
+
+
     def test_default_connection_sentinel_url_master(self):
         sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
         self.app.config['REDIS_URL'] = 'redis+sentinel://hostname:7001/mymaster/3'
+        self.app.config['REDIS_DECODE_RESPONSES'] = True
         sentinel.init_app(self.app)
         conn = sentinel.default_connection
         with self.app.app_context():
             self.assertIsNotNone(sentinel.sentinel)
+
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['is_master'], True)
             self.assertEqual(inst.kwargs['service_name'], 'mymaster')
             self.assertEqual(inst.kwargs['connection_kwargs']['db'], 3)
+            self.assertEqual(inst.kwargs['connection_kwargs']['decode_responses'], True)
+
 
     def test_default_connection_sentinel_url_slave(self):
         sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
         self.app.config['REDIS_URL'] = 'redis+sentinel://hostname:7001/myslave/3?slave=true'
+        self.app.config['REDIS_DECODE_RESPONSES'] = True
+        self.app.config['REDIS_SENTINEL_SOCKET_CONNECT_TIMEOUT'] = 0.3
         sentinel.init_app(self.app)
         conn = sentinel.default_connection
         with self.app.app_context():
             self.assertIsNotNone(sentinel.sentinel)
+
             inst = conn._get_current_object()
             self.assertEqual(inst.kwargs['is_master'], False)
             self.assertEqual(inst.kwargs['service_name'], 'myslave')
             self.assertEqual(inst.kwargs['connection_kwargs']['db'], 3)
+            self.assertEqual(inst.kwargs['connection_kwargs']['decode_responses'], True)
 
     def test_unsupported_url_scheme(self):
         sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
@@ -427,6 +462,7 @@ class TestWithApp(TestCase):
     def test_named_master(self):
         sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
         self.app.config['REDIS_URL'] = 'redis+sentinel://hostname:7001/mymaster/3'
+        self.app.config['REDIS_DECODE_RESPONSES'] = True
         sentinel.init_app(self.app)
         conn = sentinel.master_for('othermaster', db=6)
         with self.app.app_context():
@@ -435,6 +471,7 @@ class TestWithApp(TestCase):
             self.assertEqual(inst.kwargs['is_master'], True)
             self.assertEqual(inst.kwargs['service_name'], 'othermaster')
             self.assertEqual(inst.kwargs['connection_kwargs']['db'], 6)
+            self.assertEqual(inst.kwargs['connection_kwargs']['decode_responses'], True)
 
     def test_named_master_no_sentinel(self):
         sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
@@ -449,6 +486,7 @@ class TestWithApp(TestCase):
     def test_named_slave(self):
         sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)
         self.app.config['REDIS_URL'] = 'redis+sentinel://hostname:7001/mymaster/3'
+        self.app.config['REDIS_DECODE_RESPONSES'] = True
         sentinel.init_app(self.app)
         conn = sentinel.slave_for('otherslave', db=6)
         with self.app.app_context():
@@ -457,6 +495,7 @@ class TestWithApp(TestCase):
             self.assertEqual(inst.kwargs['is_master'], False)
             self.assertEqual(inst.kwargs['service_name'], 'otherslave')
             self.assertEqual(inst.kwargs['connection_kwargs']['db'], 6)
+            self.assertEqual(inst.kwargs['connection_kwargs']['decode_responses'], True)
 
     def test_named_slave_no_sentinel(self):
         sentinel = SentinelExtension(client_class=FakeRedis, sentinel_class=FakeSentinel)

@@ -299,7 +299,6 @@ class SentinelExtension(object):
             config.pop(key('HOST'))
             config[key('UNIX_SOCKET_PATH')] = host
 
-        # Create the instance with keyword arguments
         args = inspect.getargspec(client_class.__init__).args
         args.remove('self')
 

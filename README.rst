@@ -65,7 +65,7 @@ Creating multiple connection pools using a single Sentinel cluster
     redis_sentinel = SentinelExtension()
     master1 = redis_sentinel.master_for('service1')
     master2 = redis_sentinel.master_for('service2')
-    slave1 = redis_sentinel.master_for('service1')
+    slave1 = redis_sentinel.slave_for('service1')
 
 Accessing redis-py's Sentinel instance
 --------------------------------------

@@ -83,3 +83,17 @@ Accessing redis-py's Sentinel instance
     def index():
         slaves = redis_sentinel.sentinel.discover_slaves('service1')
         return jsonify(slaves=slaves)
+
+Change log
+----------
+
+v0.2.0
+~~~~~~
+
+* Use config variables other than `REDIS_{HOST, PORT, DB}` even if `REDIS_URL` is used
+* Minor refactoring
+
+v0.1.0
+~~~~~~
+
+* Initial release

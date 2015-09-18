@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
     name='Flask-Redis-Sentinel',
     py_modules=['flask_redis_sentinel'],
-    version='0.1.0',
+    version='0.2.0',
     install_requires=['Flask>=0.10.1', 'redis>=2.10.3'],
     description='Redis-Sentinel integration for Flask',
     url='https://github.com/infinario/flask-redis-sentinel',

@@ -1,12 +1,12 @@
-Flask-Redis-Sentinel
-====================
+Redis-Sentinel-Url
+==================
 
-.. image:: https://travis-ci.org/Infinario/flask-redis-sentinel.svg
-    :target: https://travis-ci.org/Infinario/flask-redis-sentinel
+.. image:: https://travis-ci.org/exponea/redis-sentinel-url.svg
+    :target: https://travis-ci.org/exponea/redis-sentinel-url
     :alt: Travis CI
 
-Flask-Redis-Sentinel provides support for connecting to Redis using Sentinel and also supports connecting to Redis
-without it.
+Redis-Sentinel-Url provides parser and connection factory for `redis://` and `redis+sentinel://` URLs (the latter
+being defined by this package).
 
 * Supports Python 2.7 and 3.3+
 * Licensed using Apache License 2.0
@@ -16,84 +16,42 @@ Installation
 
 Install with pip::
 
-    pip install Flask-Redis-Sentinel
+    pip install Redis-Sentinel-Url
+
+
+URL scheme for connecting via Sentinel
+--------------------------------------
+
+This package defines `redis+sentinel://` scheme for connecting to Redis via Sentinel::
+
+    redis+sentinel://[:sentinel_password@]host:port[,host2:port2,...][/service_name[/db]][?param1=value1[&param2=value=2&...]]
+
+- You can specify multiple sentinel host:port pairs separated by comma.
+- If `service_name` is provided, it is used to create a default client
+- `service_name` and `db` can also be specified as URL parameters (URL parameters take precedence)
+- Client options (keyword arguments to `redis.StrictRedis`) are specified as URL parameters
+- Options for connecting to Sentinel (keyword arguments to `redis.sentinel.Sentinel`) are specified
+  with `sentinel_` prefix
+- There is special `client_type` option to specify whether the default client should be `master` (the default) or
+  `slave` service when connecting via Sentinel
 
 Basic usage
 -----------
 
-.. code-block:: python
-
-    from flask.ext.redis_sentinel import SentinelExtension
-
-    redis_sentinel = SentinelExtension()
-    redis_connection = redis_sentinel.default_connection
-
-    # Later when you create application
-    app = Flask(...)
-    redis_sentinel.init_app(app)
-
-You can configure Redis connection parameters using `REDIS_URL` Flask configuration variable with `redis+sentinel`
-URL scheme::
-
-    redis+sentinel://localhost:26379[,otherhost:26379,...]/mymaster/0
-    redis+sentinel://localhost:26379[,otherhost:26379,...]/mymaster/0?socket_timeout=0.1
-    redis+sentinel://localhost:26379[,otherhost:26379,...]/mymaster/0?sentinel_socket_timeout=0.1
-    redis+sentinel://:sentinel-secret-password@localhost:26379[,otherhost:26379,...]/mymaster/0?sentinel_socket_timeout=0.1
-
-The extension also supports URL schemes as supported by redis-py for connecting to an instance directly without Sentinel::
-
-    redis://[:password]@localhost:6379/0
-    rediss://[:password]@localhost:6379/0
-    unix://[:password]@/path/to/socket.sock?db=0
-
-Flask-And-Redis style config variables are also supported for easier migration, but the extension will
-log a `DeprecationWarning`::
-
-    REDIS_HOST = 'localhost'
-    REDIS_PORT = 6379
-    REDIS_DB = 0
-
-In case both `REDIS_URL` and other variables are present, the URL is used.
-
-Creating multiple connection pools using a single Sentinel cluster
-------------------------------------------------------------------
+Supports schemes supported by `redis.StrictRedis.from_url` and also `redis+sentinel://` scheme described above:
 
 .. code-block:: python
 
-    from flask.ext.redis_sentinel import SentinelExtension
+    import redis_sentinel_url
 
-    redis_sentinel = SentinelExtension()
-    master1 = redis_sentinel.master_for('service1')
-    master2 = redis_sentinel.master_for('service2')
-    slave1 = redis_sentinel.slave_for('service1')
+    sentinel, client = redis_sentinel_url.connect('redis://localhost/0')
+    # None, StrictRedis(...)
 
-Accessing redis-py's Sentinel instance
---------------------------------------
+    sentinel, client = redis_sentinel_url.connect('rediss://localhost/0')
+    # None, StrictRedis(...)
 
-.. code-block:: python
+    sentinel, client = redis_sentinel_url.connect('unix://[:password]@/path/to/socket.sock?db=0')
+    # None, StrictRedis(...)
 
-    from flask.ext.redis_sentinel import SentinelExtension
-    from flask import jsonify, Flask
-
-    app = Flask('test')
-
-    redis_sentinel = SentinelExtension(app=app)
-
-    @app.route('/'):
-    def index():
-        slaves = redis_sentinel.sentinel.discover_slaves('service1')
-        return jsonify(slaves=slaves)
-
-Change log
-----------
-
-v0.2.0
-~~~~~~
-
-* Use config variables other than `REDIS_{HOST, PORT, DB}` even if `REDIS_URL` is used
-* Minor refactoring
-
-v0.1.0
-~~~~~~
-
-* Initial release
+    sentinel, client = redis_sentinel_url.connect('redis+sentinel://localhost:26379,otherhost:26479/mymaster/0')
+    # Sentinel(...), StrictRedis(...)

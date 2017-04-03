@@ -103,7 +103,8 @@ class TestUrlParsing(TestCase):
 
     def test_with_password(self):
         parsed = parse_sentinel_url('redis+sentinel://:thesecret@hostname:7000')
-        self.assertEquals(parsed.sentinel_options, {'password': 'thesecret'})
+        self.assertEquals(parsed.sentinel_options, {})
+        self.assertEquals(parsed.client_options['password'], 'thesecret')
 
 
 class FakeRedis(MagicMock):
@@ -223,4 +224,3 @@ class TestConnecting(TestCase):
         with self.assertRaisesRegexp(ValueError, r'Unsupported redis URL scheme: redis\+something'):
             connect('redis+something://hostname:7001/myslave/3?slave=true', client_class=FakeRedis,
                     sentinel_class=FakeSentinel, client_options={'decode_responses': True})
-

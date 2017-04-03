@@ -100,7 +100,7 @@ def parse_sentinel_url(url, sentinel_options=None, client_options=None):
         url_options.update(client_options)
 
     if password is not None:
-        sentinel_url_options['password'] = password
+        url_options['password'] = password
 
     for name, value in iteritems(urlparse.parse_qs(url.query)):
         if name in global_option_types:

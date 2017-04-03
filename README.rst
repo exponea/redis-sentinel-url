@@ -24,7 +24,7 @@ URL scheme for connecting via Sentinel
 
 This package defines `redis+sentinel://` scheme for connecting to Redis via Sentinel::
 
-    redis+sentinel://[:sentinel_password@]host:port[,host2:port2,...][/service_name[/db]][?param1=value1[&param2=value=2&...]]
+    redis+sentinel://[:password@]host:port[,host2:port2,...][/service_name[/db]][?param1=value1[&param2=value=2&...]]
 
 - You can specify multiple sentinel host:port pairs separated by comma.
 - If `service_name` is provided, it is used to create a default client

@@ -24,7 +24,7 @@ import sys
 
 if sys.version_info[0] == 2:  # pragma: no cover
     # Python 2.x
-    _string_types = basestring
+    _string_types = basestring  # noqa: F821
 
     def iteritems(d):
         return d.iteritems()
@@ -173,7 +173,7 @@ def connect(url, sentinel_class=redis.sentinel.Sentinel, sentinel_options=None, 
     sentinel_url = parse_sentinel_url(url, sentinel_options=sentinel_options, client_options=client_options)
 
     sentinel = sentinel_class(sentinel_url.hosts, sentinel_kwargs=sentinel_url.sentinel_options,
-                   **sentinel_url.client_options)
+                              **sentinel_url.client_options)
     client = None
 
     if sentinel_url.default_client:

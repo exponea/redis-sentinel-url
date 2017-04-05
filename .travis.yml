@@ -8,5 +8,8 @@ python:
   - "pypy"
   - "pypy3"
 install:
+  - "pip install flake8"
   - "pip install ."
-script: nosetests
+script:
+  - flake8
+  - nosetests

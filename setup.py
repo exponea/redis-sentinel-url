@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
     name='Redis-Sentinel-Url',
     py_modules=['redis_sentinel_url'],
-    version='1.0.0',
+    version='1.0.1',
     install_requires=['redis>=2.10.3'],
     tests_require=['mock', 'nose'],
     test_suite='nose.collector',

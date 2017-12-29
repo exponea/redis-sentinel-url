@@ -111,6 +111,7 @@ class TestUrlParsing(TestCase):
         self.assertEquals(parsed.client_options['password'], '  ')
         self.assertEqual(parsed.default_client, DefaultClient('master', '//mydb//'))
 
+
 class FakeRedis(MagicMock):
     def __init__(self, host='localhost', port=6379,
                  db=0, password=None, socket_timeout=None,

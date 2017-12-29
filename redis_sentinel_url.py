@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from collections import namedtuple
+import urllib
 try:
     import urllib.parse as urlparse
 except ImportError:  # pragma: no cover
@@ -74,7 +75,7 @@ def parse_sentinel_url(url, sentinel_options=None, client_options=None):
         hostspec = url.netloc
 
     if auth and ':' in auth:
-        _, password = auth.split(':', 1)
+        password = urllib.unquote(auth.split(':', 1)[1])
     else:
         password = None
 
@@ -136,7 +137,7 @@ def parse_sentinel_url(url, sentinel_options=None, client_options=None):
     if 'service' in url_options:
         service_name = url_options.pop('service')
     elif len(path_parts) >= 1:
-        service_name = path_parts[0]
+        service_name = urllib.unquote(path_parts[0])
     else:
         service_name = None
 

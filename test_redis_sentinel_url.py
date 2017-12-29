@@ -106,6 +106,11 @@ class TestUrlParsing(TestCase):
         self.assertEquals(parsed.sentinel_options, {})
         self.assertEquals(parsed.client_options['password'], 'thesecret')
 
+    def test_with_url_encoding(self):
+        parsed = parse_sentinel_url('redis+sentinel://:%20%20@hostname:7000/%2F%2Fmydb%2F%2F/0')
+        self.assertEquals(parsed.client_options['password'], '  ')
+        self.assertEqual(parsed.default_client, DefaultClient('master', '//mydb//'))
+
 
 class FakeRedis(MagicMock):
     def __init__(self, host='localhost', port=6379,

@@ -7,7 +7,7 @@ setup(
     py_modules=['redis_sentinel_url'],
     version='1.0.1',
     install_requires=['redis>=2.10.3'],
-    tests_require=['mock', 'nose'],
+    tests_require=['mock', 'pytest'],
     test_suite='nose.collector',
     description='A factory for redis connection that supports using Redis Sentinel',
     url='https://github.com/exponea/redis-sentinel-url',
@@ -19,14 +19,14 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent',
         'License :: OSI Approved :: Apache Software License',
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'Topic :: Software Development :: Libraries :: Python Modules'
+        'Topic :: Software Development :: Libraries :: Python Modules',
     ]
 )

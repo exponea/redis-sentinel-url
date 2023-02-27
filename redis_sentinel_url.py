@@ -90,6 +90,7 @@ def parse_sentinel_url(url, sentinel_options=None, client_options=None):
     option_types = {
         'socket_timeout': float,
         'socket_connect_timeout': float,
+        'ssl': lambda opt: bool(int(opt)),
     }
 
     sentinel_url_options = {}

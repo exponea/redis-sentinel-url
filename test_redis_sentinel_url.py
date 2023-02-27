@@ -56,6 +56,23 @@ class TestUrlParsing(TestCase):
             'redis+sentinel://hostname:7000/theslave?client_type=slave')
         self.assertEqual(parsed.default_client, DefaultClient('slave', 'theslave'))
 
+    def test_ssl(self):
+        parsed = parse_sentinel_url('redis+sentinel://hostname:7000/?ssl=1')
+        self.assertDictEqual(parsed.client_options, {'db': 0, 'ssl': True})
+
+        parsed = parse_sentinel_url('redis+sentinel://hostname:7000/?ssl=0')
+        self.assertDictEqual(parsed.client_options, {'db': 0, 'ssl': False})
+
+        parsed = parse_sentinel_url('redis+sentinel://hostname:7000/?sentinel_ssl=1')
+        self.assertDictEqual(parsed.sentinel_options, {'ssl': True})
+
+        parsed = parse_sentinel_url('redis+sentinel://hostname:7000/?sentinel_ssl=0')
+        self.assertDictEqual(parsed.sentinel_options, {'ssl': False})
+
+        parsed = parse_sentinel_url('redis+sentinel://hostname:7000/?sentinel_ssl=1&ssl=1')
+        self.assertDictEqual(parsed.client_options, {'db': 0, 'ssl': True})
+        self.assertDictEqual(parsed.sentinel_options, {'ssl': True})
+
     def test_invalid_client_type(self):
         with self.assertRaises(ValueError):
             parse_sentinel_url(
